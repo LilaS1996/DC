@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>神經鏈AI - 科技聊天室</title>
+    <link rel="stylesheet" href="tech-ai-chat.css">
+</head>
+<body>
+    <div class="matrix-bg"></div>
+    <div class="app">
+        <div class="sidebar">
+            <div class="server-header">
+                <div class="neuralink-logo">⟐ 神經鏈AI</div>
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span>AI核心線上</span>
+                </div>
+            </div>
+            <ul class="channels">
+                <li class="channel active"># 智能聊天</li>
+                <li class="channel"># 程式輔助</li>
+                <li class="channel"># 數據分析</li>
+            </ul>
+        </div>
+        <div class="chat-container">
+            <div class="chat-header">
+                <div class="channel-title">⟐ 智能聊天室</div>
+                <div class="system-stats">
+                    <span>延遲: <span id="latency">32ms</span></span>
+                    <span>令牌: <span id="tokens">0</span></span>
+                </div>
+            </div>
+            <div class="messages" id="messages"></div>
+            <div class="input-area">
+                <div class="typing-indicator" id="typing-indicator" style="display:none;">
+                    <div class="typing-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                    神經鏈AI 處理中...
+                </div>
+                <div class="input-wrapper">
+                    <div class="input-prefix">⟐</div>
+                    <input type="text" id="message-input" placeholder="神經介面已啟動，開始對話...">
+                    <button id="send-btn">→</button>
+                </div>
+                <div class="quick-replies">
+                    <button class="quick-btn" data-reply="系統狀態">系統狀態</button>
+                    <button class="quick-btn" data-reply="生成程式碼">生成程式碼</button>
+                    <button class="quick-btn" data-reply="數據分析">數據分析</button>
+                    <button class="quick-btn" data-reply="緊急協議">緊急協議</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="tech-ai-chat.js"></script>
+</body>
+</html>
