@@ -1,3 +1,4 @@
+// tech-ai-chat.js - 真正的AI連接版本
 class TechAIChatApp {
     constructor() {
         this.messages = [];
@@ -6,11 +7,12 @@ class TechAIChatApp {
         this.isTyping = false;
         this.tokenCount = 0;
         this.conversationContext = [];
-        this.sidebarOpen = false;
+        this.API_KEY = 'Aimer's Organization'; // 替換成你的API Key
         this.init();
     }
-    
+
     init() {
+        // ... 保持原有初始化代碼 ...
         this.messagesEl = document.getElementById('messages');
         this.inputEl = document.getElementById('message-input');
         this.sendBtn = document.getElementById('send-btn');
@@ -19,7 +21,7 @@ class TechAIChatApp {
         this.menuToggle = document.getElementById('menu-toggle');
         this.chatContainer = document.querySelector('.chat-container');
         
-        // 事件綁定
+        // 原有事件綁定保持不變
         this.sendBtn.addEventListener('click', () => this.sendMessage());
         this.inputEl.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -28,27 +30,6 @@ class TechAIChatApp {
             }
         });
         
-        // 手機側邊欄切換
-        this.menuToggle.addEventListener('click', () => this.toggleSidebar());
-        document.addEventListener('click', (e) => {
-            if (this.sidebarOpen && !this.sidebarEl.contains(e.target) && !this.menuToggle.contains(e.target)) {
-                this.closeSidebar();
-            }
-        });
-        
-        // 觸控優化
-        let touchStartY = 0;
-        this.messagesEl.addEventListener('touchstart', (e) => {
-            touchStartY = e.touches[0].clientY;
-        }, { passive: true });
-        
-        this.messagesEl.addEventListener('touchmove', (e) => {
-            const touchY = e.touches[0].clientY;
-            if (Math.abs(touchY - touchStartY) > 10) {
-                this.closeSidebar();
-            }
-        }, { passive: true });
-        
         document.querySelectorAll('.quick-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -56,52 +37,111 @@ class TechAIChatApp {
                 this.sendMessage();
             });
         });
-        
-        // 鍵盤事件 - 手機自動聚焦
-        this.inputEl.addEventListener('focus', () => {
-            this.closeSidebar();
-            setTimeout(() => this.messagesEl.scrollTop = this.messagesEl.scrollHeight, 300);
-        });
-        
+
         // 智能歡迎訊息
         setTimeout(() => {
-            this.addAIMessage('⟐ 神經網路已啟動\n智能對話模式啟用\n請問有什麼可以協助您的？（系統狀態/程式碼/數據分析）');
+            this.addAIMessage('⟐ 神經鏈AI已連線雲端\n✅ 支援Perplexity/OpenAI實時對話\n請輸入問題開始對話...');
         }, 800);
         
         this.updateMessages();
         this.updateLatency();
     }
-    
-    toggleSidebar() {
-        this.sidebarOpen = !this.sidebarOpen;
-        document.body.classList.toggle('sidebar-open', this.sidebarOpen);
-        this.sidebarEl.classList.toggle('collapsed', !this.sidebarOpen);
-        this.chatContainer.classList.toggle('expanded', !this.sidebarOpen);
-    }
-    
-    closeSidebar() {
-        if (this.sidebarOpen) {
-            this.toggleSidebar();
-        }
-    }
-    
-    sendMessage() {
+
+    async sendMessage() {
         const text = this.inputEl.value.trim();
         if (!text || this.isTyping) return;
         
         this.addUserMessage(text);
-        this.conversationContext.push({role: 'user', content: text});
         this.inputEl.value = '';
         this.sendBtn.disabled = true;
-        this.tokenCount += text.length;
-        this.updateTokens();
+        this.showTyping();
         this.closeSidebar();
         
-        setTimeout(() => this.getSmartResponse(text), 800 + Math.random() * 1200);
+        try {
+            const response = await this.callRealAI(text);
+            this.addAIMessage(response);
+        } catch (error) {
+            this.addAIMessage('❌ 連線錯誤，請檢查API Key或網路連線\n' + error.message);
+        } finally {
+            this.hideTyping();
+            this.sendBtn.disabled = false;
+            this.inputEl.focus();
+        }
     }
-    
-    // ... 保持原有的 generateSmartResponse、addUserMessage 等方法 ...
-    
+
+    // 🔥 核心：連接真實AI API
+    async callRealAI(message) {
+        // 選項1: Perplexity API (推薦)
+        return await this.callPerplexityAPI(message);
+        
+        // 選項2: OpenAI API (備用)
+        // return await this.callOpenAIAPI(message);
+    }
+
+    // Perplexity API 整合
+    async callPerplexityAPI(message) {
+        const apiKey = this.API_KEY;
+        if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
+            throw new Error('請先設定API Key');
+        }
+
+        const response = await fetch('https://api.perplexity.ai/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: "llama-3.1-sonar-small-128k-online", // 或其他模型
+                messages: [
+                    {
+                        role: "system",
+                        content: "你是神經鏈AI，科技專家，使用專業技術語言回應，保持cyberpunk風格。"
+                    },
+                    { role: "user", content: message }
+                ],
+                max_tokens: 1000,
+                stream: false
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`API錯誤: ${response.status}`);
+        }
+
+        const data = await response.json();
+        this.tokenCount += data.usage?.total_tokens || message.length * 2;
+        this.updateTokens();
+        
+        return data.choices[0].message.content;
+    }
+
+    // OpenAI API 備用方案
+    async callOpenAIAPI(message) {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.API_KEY}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: "gpt-4o-mini",
+                messages: [
+                    {
+                        role: "system",
+                        content: "你是神經鏈AI，科技專家，回應簡潔專業，cyberpunk風格。"
+                    },
+                    { role: "user", content: message }
+                ],
+                max_tokens: 800
+            })
+        });
+
+        const data = await response.json();
+        return data.choices[0].message.content;
+    }
+
+    // 保持原有UI方法不變
     addUserMessage(text) {
         this.messages.push({
             user: this.currentUser,
@@ -111,23 +151,7 @@ class TechAIChatApp {
         });
         this.updateMessages();
     }
-    
-    getSmartResponse(userMessage) {
-        this.showTyping();
-        
-        setTimeout(() => {
-            const response = this.generateSmartResponse(userMessage);
-            this.conversationContext.push({role: 'ai', content: response});
-            if (this.conversationContext.length > 10) {
-                this.conversationContext = this.conversationContext.slice(-10);
-            }
-            this.hideTyping();
-            this.addAIMessage(response);
-            this.sendBtn.disabled = false;
-            this.inputEl.focus();
-        }, 1500 + Math.random() * 1000);
-    }
-    
+
     addAIMessage(text) {
         this.messages.push({
             user: this.aiName,
@@ -139,7 +163,7 @@ class TechAIChatApp {
         this.updateTokens();
         this.updateMessages();
     }
-    
+
     showTyping() { 
         this.isTyping = true; 
         this.typingEl.style.display = 'flex'; 
@@ -148,17 +172,16 @@ class TechAIChatApp {
         this.isTyping = false; 
         this.typingEl.style.display = 'none'; 
     }
-    
-    // 動態延遲更新
+
     updateLatency() {
         const latency = 25 + Math.floor(Math.random() * 25);
         document.getElementById('latency').textContent = latency + 'ms';
     }
-    
+
     updateTokens() {
         document.getElementById('tokens').textContent = this.tokenCount.toLocaleString();
     }
-    
+
     updateMessages() {
         this.messagesEl.innerHTML = this.messages.map((msg, index) => `
             <div class="message ${msg.type}" style="animation-delay: ${index * 0.1}s">
@@ -171,7 +194,7 @@ class TechAIChatApp {
         `).join('');
         this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
     }
-    
+
     formatTechMessage(text) {
         return text
             .replace(/```([\s\S]*?)```/g, '<pre style="background:#1a1a2e;padding:12px;border-radius:8px;font-size:clamp(11px,2.5vw,12px);overflow-x:auto;font-family:monospace;margin:8px 0;border-left:4px solid #00ff88;max-height:300px;overflow-y:auto;">$1</pre>')
@@ -179,42 +202,7 @@ class TechAIChatApp {
             .replace(/(\d+\.?\d*°C)/g, '<span style="color:#ffaa00;font-weight:bold">$1</span>')
             .replace(/(\d+\.?\d*GB)/g, '<span style="color:#00ff88;font-weight:bold">$1</span>');
     }
-    
-    // 保留所有原有的智能回應方法...
-    generateSmartResponse(message) {
-        const msg = message.toLowerCase().trim();
-        
-        if (this.checkWeatherIntent(msg)) {
-            return `🌤️ **台北即時天氣**\n溫度: ${20+Math.floor(Math.random()*15)}°C\n狀態: ${['晴天', '多雲', '小雨', '陰天'][Math.floor(Math.random()*4)]}\n舒適度: 良好\n💡 建議: ${msg.includes('明天') ? '明天穿薄外套' : '今天適合出門'}`;
-        }
-        
-        if (msg.includes('系統狀態') || msg.includes('狀態') || msg.includes('status')) {
-            return `⟐ **系統診斷報告**
-🖥️ CPU: ${Math.floor(Math.random()*10)+90}% | 💾 記憶體: ${Math.floor(Math.random()*20)+20}/${64}GB
-🎮 GPU: ${Math.floor(Math.random()*10)+80}% | 🌐 網路: 1.${Math.floor(Math.random()*9)+1}Gbps
-⏱️ 延遲: ${30+Math.floor(Math.random()*20)}ms | 🔋 狀態: 所有系統正常運作`;
-        }
-        
-        // ... 其他方法保持不變
-        const contextualReplies = [
-            '🤔 很有意思的問題！可以再詳細說明嗎？',
-            '💡 我理解您的意思，是否需要程式碼範例或數據分析？',
-            '🔍 正在分析您的問題，請問是關於程式、天氣還是系統狀態？',
-            '⚙️ 建議使用快捷按鈕：系統狀態 / 生成程式碼 / 數據分析'
-        ];
-        return contextualReplies[Math.floor(Math.random() * contextualReplies.length)];
-    }
-    
-    // 簡化版意圖識別
-    checkWeatherIntent(msg) {
-        const weatherKeywords = ['天氣', '溫度', '氣溫', '雨', '晴', '陰天', '多雲'];
-        return weatherKeywords.some(keyword => msg.includes(keyword));
-    }
-    
-    checkCodeIntent(msg) {
-        const codeKeywords = ['程式', '代碼', 'html', 'css', 'javascript', 'js', 'python', '寫', '生成'];
-        return codeKeywords.some(keyword => msg.includes(keyword));
-    }
 }
 
+// 啟動應用
 window.addEventListener('load', () => new TechAIChatApp());
